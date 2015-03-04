@@ -6,23 +6,23 @@ var MemoryGame = function (gs) {
 
 	this.Card = function (sprite) {
 		this.nombre = sprite;
-		this.estado = this.states.boca_abajo;
+		this.estado = this.BOCA_ABAJO;
 	};
 
 	// este objeto con prototype porque, al contrario que MemoryGame, se van a crear varias cartas y así comparten código
 	Card.prototype = {
-		var states = new enum {"boca_abajo", "boca_arriba", "encontrada"};
+		this.BOCA_ABAJO = 0, BOCA_ARRIBA = 1, ENCONTRADA = 2;
 
 		flip : function() {
-			if (this.estado === this.states.boca_abajo)
-				this.estado = this.states.boca_arriba;
+			if (this.estado === this.BOCA_ABAJO)
+				this.estado = this.BOCA_ARRIBA;
 
-			else if (this.estado === this.states.boca_arriba)
-				this.estado = this.states.boca_abajo;
+			else if (this.estado === this.BOCA_ARRIBA)
+				this.estado = this.BOCA_ABAJO;
 		},
 
 		found : function() {
-			this.estado = this.states.encontrada;
+			this.estado = this.ENCONTRADA;
 		},
 
 		compareTo : function (otherCard) {
@@ -44,7 +44,7 @@ var MemoryGame = function (gs) {
 		this.gs.drawMessage (this.messageState);
 
 		for (card in this.cards)
-			card.draw(this.gs, pos) // que cojones se pone en pos
+			card.draw(this.gs, pos) // qué se pone en pos?
 	};
 
 	this.loop = function() {
@@ -56,13 +56,13 @@ var MemoryGame = function (gs) {
 		var companera_levantada = false;
 		var i;
 
-		if (this.cards[cardId].estado == Card.states.boca_abajo) { // está bien acceder a esto?
-			this.cards[cardId].estado = Card.states.boca_arriba;
+		if (this.cards[cardId].estado == Card.BOCA_ABAJO) {
+			this.cards[cardId].estado = Card.BOCA_ARRIBA;
 
 			for (i = 0; i < this.cards.length; i++) {
 				if (i != cardId) {
-					if (this.cards[i].estado == Card.states.boca_arriba && this.cards[i].nombre == this.cards[cardId].nombre) {
-						this.cards[i].estado = this.cards[cardId].estado = Card.states.encontrada;
+					if (this.cards[i].estado == Card.BOCA_ARRIBA && this.cards[i].nombre == this.cards[cardId].nombre) {
+						this.cards[i].estado = this.cards[cardId].estado = Card.ENCONTRADA;
 
 						companera_levantada = true;
 						// mensaje: encontrado
@@ -74,3 +74,7 @@ var MemoryGame = function (gs) {
 		}
 	};
 };
+
+// cómo hacer el enum de Card (no se puede declarar en prototype?)
+// cómo poner el array de cartas
+// draw de MemoryGame y de Card
