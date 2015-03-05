@@ -28,14 +28,13 @@ Card.prototype = {
 	},
 
 	draw : function (gs, pos) {
-		gs.draw (this.nombre , pos); // no estoy seguro de esto
+		gs.draw (this.nombre , pos);
 	}
 };
 
 var MemoryGame = function (gs) {
 	this.gs = gs;
 	this.cards = new Array( new Card ("8-ball"), new Card ("8-ball"),
-							new Card ("back"), new Card ("back"),
 							new Card ("potato"), new Card ("potato"),
 							new Card ("dinosaur"), new Card ("dinosaur"),
 							new Card ("kronos"), new Card ("kronos"),
@@ -53,16 +52,16 @@ var MemoryGame = function (gs) {
 		this.loop();
 	};
 
-	this.draw = function() {
+	this.draw = function() { // APUNTA AL JODÍO WINDOWS
 		this.gs.drawMessage (this.messageState);
 
-		for (card in this.cards)
-			card.draw(this.gs, pos) // qué se pone en pos?
+		for (var i = 0; i < this.cards.length; i++)
+			card.draw(this.gs, i);
 	};
 
 	this.loop = function() {
-		//that = this; si no va hacer el that
-		setInterval (this.draw, 16)
+		//that = this; si no va hacer el that???
+		setInterval (this.draw, 16); // AQUÍ EMPIEZA EL PROBLEMA
 	};
 
 	this.onClick = function (cardId) {
@@ -87,9 +86,3 @@ var MemoryGame = function (gs) {
 		}
 	};
 };
-
-
-
-// cómo hacer el enum de Card (no se puede declarar en prototype?)
-// cómo poner el array de cartas
-// draw de MemoryGame y de Card
