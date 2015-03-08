@@ -28,61 +28,94 @@ Card.prototype = {
 	},
 
 	draw : function (gs, pos) {
-		gs.draw (this.nombre , pos);
+		if (this.estado === this.states.BOCA_ABAJO)
+			gs.draw ("back", pos);
+		else
+			gs.draw (this.nombre , pos);
 	}
 };
 
 var MemoryGame = function (gs) {
 	this.gs = gs;
-	this.cards = new Array( new Card ("8-ball"), new Card ("8-ball"),
-							new Card ("potato"), new Card ("potato"),
-							new Card ("dinosaur"), new Card ("dinosaur"),
-							new Card ("kronos"), new Card ("kronos"),
-							new Card ("rocket"), new Card ("rocket"),
-							new Card ("unicorn"), new Card ("unicorn"),
-							new Card ("guy"), new Card ("guy"),
-							new Card ("zeppelin"), new Card ("zeppelin") );
-	// this.cards.shuffle();
+	this.cards = [];
 	this.finished = false;
 	this.messageState = "Memory Game";
+	this.card_lock = false;
 
 	this.initGame = function() {
-		this.gs.load ()
+		
+		this.cards = [ new Card ("8-ball"), new Card ("potato"), new Card ("dinosaur"),
+						new Card ("kronos"), new Card ("rocket"), new Card ("unicorn"),
+						new Card ("guy"), new Card ("zeppelin") ];
+
+		for (var i = 0, len = this.cards.length; i < len; i++) {
+			this.cards[len + i] = new Card (this.cards[i].nombre);
+		}
+
+		this.cards = shuffle (this.cards);
 
 		this.loop();
 	};
 
-	this.draw = function() { // APUNTA AL JODÍO WINDOWS
+	this.draw = function() {
 		this.gs.drawMessage (this.messageState);
 
 		for (var i = 0; i < this.cards.length; i++)
-			card.draw(this.gs, i);
+			this.cards[i].draw(this.gs, i);
 	};
 
 	this.loop = function() {
-		//that = this; si no va hacer el that???
-		setInterval (this.draw, 16); // AQUÍ EMPIEZA EL PROBLEMA
+		var self = this;
+		setInterval (function() {self.draw();}, 16);
 	};
 
 	this.onClick = function (cardId) {
-		var companera_levantada = false;
-		var i;
+		if (this.card_lock == false) {
+			var i;
 
-		if (this.cards[cardId].estado == Card.BOCA_ABAJO) {
-			this.cards[cardId].estado = Card.BOCA_ARRIBA;
+			this.cards[cardId].estado = Card.prototype.states.BOCA_ARRIBA;
 
 			for (i = 0; i < this.cards.length; i++) {
-				if (i != cardId) {
-					if (this.cards[i].estado == Card.BOCA_ARRIBA && this.cards[i].nombre == this.cards[cardId].nombre) {
-						this.cards[i].estado = this.cards[cardId].estado = Card.ENCONTRADA;
+				if (i != cardId && this.cards[i].estado == Card.prototype.states.BOCA_ARRIBA) {
+					if (this.cards[i].nombre == this.cards[cardId].nombre) {
+						this.cards[i].estado = this.cards[cardId].estado = Card.prototype.states.ENCONTRADA;
 
-						companera_levantada = true;
-						// mensaje: encontrado
+						this.messageState = "Match found!";
+					}
+					else {
+						this.card_lock = true;
+						var self = this;
+						var index = i;
+						var id = cardId;
+						setTimeout (function() {
+							self.cards[index].estado = self.cards[id].estado = Card.prototype.states.BOCA_ABAJO;
+							self.card_lock = false;
+						}, 1000);
+						
+						this.messageState = "Try again";
 					}
 				}
 			}
 
-			//if (companera_levantada === false) mensaje: try again
+			var end = true;
+			for (i = 0; i < this.cards.length; i++) {
+				if (this.cards[i].estado != Card.prototype.states.ENCONTRADA)
+					end = false;
+			}
+
+			if (end) {
+				this.messageState = "You win!";
+				this.card_lock = true;
+			}
 		}
 	};
 };
+
+//+ Jonas Raoni Soares Silva
+//@ http://jsfromhell.com/array/shuffle [v1.0]
+function shuffle(o){ //v1.0
+    for(var j, x, i = o.length; i; j = Math.floor(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x);
+    return o;
+};
+
+// preguntar si el Card.prototype.states del onClick() está bien
