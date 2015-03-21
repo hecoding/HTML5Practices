@@ -1,3 +1,5 @@
+/*jshint strict:false */
+
 var Card = function (sprite) {
 		this.nombre = sprite;
 		this.estado = this.states.BOCA_ABAJO;
@@ -70,7 +72,7 @@ var MemoryGame = function (gs) {
 	};
 
 	this.onClick = function (cardId) {
-		if (this.card_lock == false) {
+		if (this.card_lock === false) {
 			var i;
 
 			this.cards[cardId].estado = Card.prototype.states.BOCA_ARRIBA;
@@ -78,7 +80,8 @@ var MemoryGame = function (gs) {
 			for (i = 0; i < this.cards.length; i++) {
 				if (i != cardId && this.cards[i].estado == Card.prototype.states.BOCA_ARRIBA) {
 					if (this.cards[i].nombre == this.cards[cardId].nombre) {
-						this.cards[i].estado = this.cards[cardId].estado = Card.prototype.states.ENCONTRADA;
+						this.cards[i].estado.found();
+						this.cards[cardId].found();
 
 						this.messageState = "Match found!";
 					}
@@ -116,6 +119,6 @@ var MemoryGame = function (gs) {
 function shuffle(o){ //v1.0
     for(var j, x, i = o.length; i; j = Math.floor(Math.random() * i), x = o[--i], o[i] = o[j], o[j] = x);
     return o;
-};
+}
 
 // preguntar si el Card.prototype.states del onClick() está bien

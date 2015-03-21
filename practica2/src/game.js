@@ -1,3 +1,5 @@
+/*jshint strict: false, undef: false, unused: false, quotmark: false, sub: true */
+
 var sprites = {
  ship: { sx: 0, sy: 0, w: 37, h: 42, frames: 1 },
  missile: { sx: 0, sy: 30, w: 2, h: 10, frames: 1 },
@@ -270,7 +272,7 @@ EnemyMissile.prototype.type = OBJECT_ENEMY_PROJECTILE;
 
 EnemyMissile.prototype.step = function(dt)  {
   this.y += this.vy * dt;
-  var collision = this.board.collide(this,OBJECT_PLAYER)
+  var collision = this.board.collide(this,OBJECT_PLAYER);
   if(collision) {
     collision.hit(this.damage);
     this.board.remove(this);
