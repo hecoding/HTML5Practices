@@ -80,8 +80,7 @@ var MemoryGame = function (gs) {
 			for (i = 0; i < this.cards.length; i++) {
 				if (i != cardId && this.cards[i].estado == Card.prototype.states.BOCA_ARRIBA) {
 					if (this.cards[i].nombre == this.cards[cardId].nombre) {
-						this.cards[i].estado.found();
-						this.cards[cardId].found();
+						this.cards[i].estado = this.cards[cardId].estado = Card.prototype.states.ENCONTRADA;
 
 						this.messageState = "Match found!";
 					}
@@ -122,3 +121,4 @@ function shuffle(o){ //v1.0
 }
 
 // preguntar si el Card.prototype.states del onClick() está bien
+// usar las funciones flip y found en vez de hacerlo a pincho
