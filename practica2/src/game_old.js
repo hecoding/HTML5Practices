@@ -1,16 +1,14 @@
 /*jshint strict: false, undef: false, unused: false, quotmark: false, sub: true */
 
-// mejor leyer el json pero por no modificar el html del profesor...
 var sprites = {
-  frog: { sx: 0, sy: 0, w: 48, h: 48, frames: 1 },
-  bg: { sx: 433, sy: 0, w: 320, h: 480, frames: 1 },
-  car1: { sx: 143, sy: 0, w: 48, h: 48, frames: 1 },
-  car2: { sx: 191, sy: 0, w: 48, h: 48, frames: 1 },  
-  car3: { sx: 239, sy: 0, w: 96, h: 48, frames: 1 },
-  car4: { sx: 335, sy: 0, w: 48, h: 48, frames: 1 },
-  car5: { sx: 383, sy: 0, w: 48, h: 48, frames: 1 },
-  trunk: { sx: 288, sy: 383, w: 142, h: 48, frames: 1 },
-  death: { sx: 0, sy: 143, w: 48, h: 48, frames: 4 }
+ ship: { sx: 0, sy: 0, w: 37, h: 42, frames: 1 },
+ missile: { sx: 0, sy: 30, w: 2, h: 10, frames: 1 },
+ enemy_purple: { sx: 37, sy: 0, w: 42, h: 43, frames: 1 },
+ enemy_bee: { sx: 79, sy: 0, w: 37, h: 43, frames: 1 },
+ enemy_ship: { sx: 116, sy: 0, w: 42, h: 43, frames: 1 },
+ enemy_circle: { sx: 158, sy: 0, w: 32, h: 33, frames: 1 },
+ explosion: { sx: 0, sy: 64, w: 64, h: 64, frames: 12 },
+ enemy_missile: { sx: 9, sy: 42, w: 3, h: 20, frame: 1, }
 };
 
 var enemies = {
@@ -32,7 +30,7 @@ var OBJECT_PLAYER = 1,
     OBJECT_ENEMY_PROJECTILE = 8,
     OBJECT_POWERUP = 16;
 
-var startGame = function() { // borrar?
+var startGame = function() {
   var ua = navigator.userAgent.toLowerCase();
 
   // Only 1 row of stars
@@ -63,15 +61,11 @@ var level1 = [
 
 
 var playGame = function() {
-  var back = new GameBoard();
-  back.add(new Background());
-
-  var gameActions = new GameBoard();
-  gameActions.add(new Frog());
-  gameActions.add(new Car({sprite: 'car1', x: 0}));
-
-  Game.setBoard(1, back);
-  Game.setBoard(2, gameActions);
+  var board = new GameBoard();
+  board.add(new PlayerShip());
+  board.add(new Level(level1,winGame));
+  Game.setBoard(3,board);
+  Game.setBoard(5,new GamePoints(0));
 };
 
 var winGame = function() {
@@ -86,77 +80,65 @@ var loseGame = function() {
                                   playGame));
 };
 
-var Background = function() {
-  this.setup('bg');
+var Starfield = function(speed,opacity,numStars,clear) {
 
-  this.x = 0;
-  this.y = 0;
+  // Set up the offscreen canvas
+  var stars = document.createElement("canvas");
+  stars.width = Game.width; 
+  stars.height = Game.height;
+  var starCtx = stars.getContext("2d");
 
-  this.step = function(dt) {};
-};
+  var offset = 0;
 
-Background.prototype = new Sprite();
+  // If the clear option is set, 
+  // make the background black instead of transparent
+  if(clear) {
+    starCtx.fillStyle = "#000";
+    starCtx.fillRect(0,0,stars.width,stars.height);
+  }
 
-var Frog = function() {
-  this.setup('frog', { reloadTime: 0.10 });
+  // Now draw a bunch of random 2 pixel
+  // rectangles onto the offscreen canvas
+  starCtx.fillStyle = "#FFF";
+  starCtx.globalAlpha = opacity;
+  for(var i=0;i<numStars;i++) {
+    starCtx.fillRect(Math.floor(Math.random()*stars.width),
+                     Math.floor(Math.random()*stars.height),
+                     2,
+                     2);
+  }
 
-  this.reload = this.reloadTime;
-  this.x = Game.width/2 - this.w / 2;
-  this.y = Game.height - this.h;
+  // This method is called every frame
+  // to draw the starfield onto the canvas
+  this.draw = function(ctx) {
+    var intOffset = Math.floor(offset);
+    var remaining = stars.height - intOffset;
 
-  this.step = function(dt) { //TODO hacer que salte fluido
-    this.reload-=dt;
-
-    // move the froglet
-    if (Game.keys['up'] && this.reload < 0) {
-      this.y -= Game.squareLength;
-      this.reload = this.reloadTime;
-    }
-    else if (Game.keys['down'] && this.reload < 0) {
-      this.y += Game.squareLength;
-      this.reload = this.reloadTime;
-    }
-    else if (Game.keys['left'] && this.reload < 0) {
-      this.x -= Game.squareLength;
-      this.reload = this.reloadTime;
-    }
-    else if (Game.keys['right'] && this.reload < 0) {
-      this.x += Game.squareLength;
-      this.reload = this.reloadTime;
-    }
-
-    // bounds check
-    if (this.y < 0) { this.y = 0; }
-    else if(this.y > Game.height - this.w) { 
-      this.y = Game.height - this.w;
+    // Draw the top half of the starfield
+    if(intOffset > 0) {
+      ctx.drawImage(stars,
+                0, remaining,
+                stars.width, intOffset,
+                0, 0,
+                stars.width, intOffset);
     }
 
-    if(this.x < 0) { this.x = 0; }
-    else if(this.x > Game.width - this.w) { 
-      this.x = Game.width - this.w;
+    // Draw the bottom half of the starfield
+    if(remaining > 0) {
+      ctx.drawImage(stars,
+              0, 0,
+              stars.width, remaining,
+              0, intOffset,
+              stars.width, remaining);
     }
   };
-};
 
-Frog.prototype = new Sprite();
-
-var Car = function (blueprint,override) {
-  this.merge(this.baseParameters);
-  this.setup(blueprint.sprite,blueprint);
-  this.merge(override);
-};
-
-Car.prototype = new Sprite();
-Car.prototype.baseParameters = { type: 1, direction: 'right', row: 0, v: 0 };
-
-Car.prototype.step = function(dt) {
-  this.x += this.v * dt;
-  this.y = Game.squareLength * 2 + Game.squareLength * this.row;
-
-  if(this.x < -this.w ||
-     this.x > Game.width) {
-       this.board.remove(this);
-  }
+  // This method is called to update
+  // the starfield
+  this.step = function(dt) {
+    offset += dt * speed;
+    offset = offset % stars.height;
+  };
 };
 
 var PlayerShip = function() { 
@@ -197,6 +179,7 @@ PlayerShip.prototype.hit = function(damage) {
     loseGame();
   }
 };
+
 
 var PlayerMissile = function(x,y) {
   this.setup('missile',{ vy: -700, damage: 10 });
@@ -316,5 +299,7 @@ Explosion.prototype.step = function(dt) {
 };
 
 window.addEventListener("load", function() {
-  Game.initialize("game",sprites,playGame);
+  Game.initialize("game",sprites,startGame);
 });
+
+

@@ -36,7 +36,8 @@ var Game = new function() {
     this.setupMobile();
 
     this.width = this.canvas.width;
-    this.height= this.canvas.height;
+    this.height = this.canvas.height;
+    this.squareLength = 48;
 
     this.ctx = this.canvas.getContext && this.canvas.getContext('2d');
     if(!this.ctx) { return alert("Please upgrade your browser to play"); }
@@ -54,7 +55,7 @@ var Game = new function() {
   
 
   // Handle Input
-  var KEY_CODES = { 37:'left', 39:'right', 32 :'fire' };
+  var KEY_CODES = { 37:'left', 39:'right', 32 :'fire', 38: 'up', 40: 'down' };
   this.keys = {};
 
   this.setupInput = function() {
@@ -145,7 +146,7 @@ var SpriteSheet = new function() {
     this.map = spriteData;
     this.image = new Image();
     this.image.onload = callback;
-    this.image.src = 'img/sprites.png';
+    this.image.src = 'img/spritesFrogger.png';
   };
 
   this.draw = function(ctx,sprite,x,y,frame) {
