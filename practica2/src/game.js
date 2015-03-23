@@ -13,6 +13,19 @@ var sprites = {
   death: { sx: 0, sy: 143, w: 48, h: 48, frames: 4 }
 };
 
+var cars = {
+  car1: { x: 320, y: 480 - 48 - sprites['car1'].h, sprite: 'car1',
+          v: 50, dir: -1 },
+  car2: { x: 0 - sprites['car2'].w, y: 480 - 48 * 2 - sprites['car2'].h, sprite: 'car2',
+          v: 50 },
+  car3: { x: 320, y: 480 - 48 * 3 - sprites['car3'].h, sprite: 'car3',
+          v: 60, dir: -1 },
+  car4: { x: 320, y: 480 - 48 * 4 - sprites['car4'].h, sprite: 'car4',
+          v: 60, dir: -1 },
+  car5: { x: 0 - sprites['car5'].w, y: 480 - 48 * 5 - sprites['car5'].h, sprite: 'car5',
+          v: 50 }
+};
+
 var enemies = {
   straight: { x: 0,   y: -50, sprite: 'enemy_ship', health: 10, 
               E: 100 },
@@ -26,9 +39,9 @@ var enemies = {
               B: 150, C: 1.2, E: 75 }
 };
 
-var OBJECT_PLAYER = 1,
-    OBJECT_PLAYER_PROJECTILE = 2,
-    OBJECT_ENEMY = 4,
+var OBJECT_FROG = 1,
+    OBJECT_CAR = 2,
+    OBJECT_TRUNK = 4,
     OBJECT_ENEMY_PROJECTILE = 8,
     OBJECT_POWERUP = 16;
 
@@ -68,7 +81,14 @@ var playGame = function() {
 
   var gameActions = new GameBoard();
   gameActions.add(new Frog());
-  gameActions.add(new Car({sprite: 'car1', x: 0}));
+  gameActions.add(new Car(cars.car1));
+  gameActions.add(new Car(cars.car2));
+  gameActions.add(new Car(cars.car3));
+  gameActions.add(new Car(cars.car4));
+  gameActions.add(new Car(cars.car5));
+  gameActions.add(new Trunk({ x: 0 - sprites['trunk'].w, y: 480 - 48 * 6 - sprites['trunk'].h, sprite: 'trunk' }));
+  gameActions.add(new Trunk({ x: Game.width, y: 480 - 48 * 7 - sprites['trunk'].h, sprite: 'trunk', dir: -1 }));
+  gameActions.add(new Trunk({ x: 0 - sprites['trunk'].w, y: 480 - 48 * 8 - sprites['trunk'].h, sprite: 'trunk' }));
 
   Game.setBoard(1, back);
   Game.setBoard(2, gameActions);
@@ -125,7 +145,7 @@ var Frog = function() {
       this.reload = this.reloadTime;
     }
 
-    // bounds check
+    // check bounds
     if (this.y < 0) { this.y = 0; }
     else if(this.y > Game.height - this.w) { 
       this.y = Game.height - this.w;
@@ -139,6 +159,7 @@ var Frog = function() {
 };
 
 Frog.prototype = new Sprite();
+Frog.prototype.type = OBJECT_FROG;
 
 var Car = function (blueprint,override) {
   this.merge(this.baseParameters);
@@ -147,11 +168,38 @@ var Car = function (blueprint,override) {
 };
 
 Car.prototype = new Sprite();
-Car.prototype.baseParameters = { type: 1, direction: 'right', row: 0, v: 0 };
+Car.prototype.type = OBJECT_CAR;
+Car.prototype.baseParameters = { type: 1, dir: 1, row: 1, v: 20 }; // row no se usa
 
 Car.prototype.step = function(dt) {
-  this.x += this.v * dt;
-  this.y = Game.squareLength * 2 + Game.squareLength * this.row;
+  this.x += this.v * this.dir * dt;
+
+  var collision = this.board.collide(this,OBJECT_FROG);
+  if(collision)
+    collision.hit();
+
+  if(this.x < -this.w ||
+     this.x > Game.width) {
+       this.board.remove(this);
+  }
+};
+
+var Trunk = function (blueprint,override) {
+  this.merge(this.baseParameters);
+  this.setup(blueprint.sprite,blueprint);
+  this.merge(override);
+};
+
+Trunk.prototype = new Sprite();
+Trunk.prototype.type = OBJECT_TRUNK;
+Trunk.prototype.baseParameters = { dir: 1, v: 20 };
+
+Trunk.prototype.step = function(dt) {
+  this.x += this.v * this.dir * dt;
+
+  var collision = this.board.collide(this,OBJECT_FROG);
+  if(collision)
+    collision.hit();
 
   if(this.x < -this.w ||
      this.x > Game.width) {
@@ -190,7 +238,7 @@ var PlayerShip = function() {
 };
 
 PlayerShip.prototype = new Sprite();
-PlayerShip.prototype.type = OBJECT_PLAYER;
+PlayerShip.prototype.type = OBJECT_CAR;
 
 PlayerShip.prototype.hit = function(damage) {
   if(this.board.remove(this)) {
@@ -205,11 +253,11 @@ var PlayerMissile = function(x,y) {
 };
 
 PlayerMissile.prototype = new Sprite();
-PlayerMissile.prototype.type = OBJECT_PLAYER_PROJECTILE;
+PlayerMissile.prototype.type = OBJECT_CAR;
 
 PlayerMissile.prototype.step = function(dt)  {
   this.y += this.vy * dt;
-  var collision = this.board.collide(this,OBJECT_ENEMY);
+  var collision = this.board.collide(this,OBJECT_TRUNK);
   if(collision) {
     collision.hit(this.damage);
     this.board.remove(this);
@@ -226,7 +274,7 @@ var Enemy = function(blueprint,override) {
 };
 
 Enemy.prototype = new Sprite();
-Enemy.prototype.type = OBJECT_ENEMY;
+Enemy.prototype.type = OBJECT_TRUNK;
 
 Enemy.prototype.baseParameters = { A: 0, B: 0, C: 0, D: 0, 
                                    E: 0, F: 0, G: 0, H: 0,
@@ -242,7 +290,7 @@ Enemy.prototype.step = function(dt) {
   this.x += this.vx * dt;
   this.y += this.vy * dt;
 
-  var collision = this.board.collide(this,OBJECT_PLAYER);
+  var collision = this.board.collide(this,OBJECT_CAR);
   if(collision) {
     collision.hit(this.damage);
     this.board.remove(this);
