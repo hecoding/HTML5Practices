@@ -42,7 +42,7 @@ var enemies = {
 var OBJECT_FROG = 1,
     OBJECT_CAR = 2,
     OBJECT_TRUNK = 4,
-    OBJECT_ENEMY_PROJECTILE = 8,
+    OBJECT_WATER = 8,
     OBJECT_POWERUP = 16;
 
 var startGame = function() { // borrar?
@@ -118,16 +118,17 @@ var Background = function() {
 Background.prototype = new Sprite();
 
 var Frog = function() {
-  this.setup('frog', { reloadTime: 0.10 });
+  this.setup('frog', { vx: 0, reloadTime: 0.10 });
 
   this.reload = this.reloadTime;
   this.x = Game.width/2 - this.w / 2;
   this.y = Game.height - this.h;
 
   this.step = function(dt) { //TODO hacer que salte fluido
-    this.reload-=dt;
+    this.reload -= dt;
+    this.x += this.vx * dt;
 
-    // move the froglet
+    // when player moves the froglet
     if (Game.keys['up'] && this.reload < 0) {
       this.y -= Game.squareLength;
       this.reload = this.reloadTime;
@@ -145,6 +146,10 @@ var Frog = function() {
       this.reload = this.reloadTime;
     }
 
+    var collision = this.board.collide(this,OBJECT_WATER); // TODO la colisión con el agua no funciona
+    if(collision)
+      this.board.remove(this);
+
     // check bounds
     if (this.y < 0) { this.y = 0; }
     else if(this.y > Game.height - this.w) { 
@@ -155,11 +160,23 @@ var Frog = function() {
     else if(this.x > Game.width - this.w) { 
       this.x = Game.width - this.w;
     }
+
+    this.vx = 0;
   };
 };
 
 Frog.prototype = new Sprite();
 Frog.prototype.type = OBJECT_FROG;
+
+Frog.prototype.onTrunk = function (v) { // TODO hacer que la rana no muera si está sobre tronco. Apartado agua.
+  this.vx = v;
+};
+
+Frog.prototype.hit = function(damage) {
+  this.board.remove(this);
+  this.board.add (new Death(this.x + this.w/2, 
+                            this.y + this.h/2));
+};
 
 var Car = function (blueprint,override) {
   this.merge(this.baseParameters);
@@ -177,8 +194,7 @@ Car.prototype.step = function(dt) {
   var collision = this.board.collide(this,OBJECT_FROG);
   if(collision)
     collision.hit();
-
-  if(this.x < -this.w ||
+  else if(this.x < -this.w ||
      this.x > Game.width) {
        this.board.remove(this);
   }
@@ -199,13 +215,45 @@ Trunk.prototype.step = function(dt) {
 
   var collision = this.board.collide(this,OBJECT_FROG);
   if(collision)
-    collision.hit();
-
-  if(this.x < -this.w ||
+    collision.onTrunk (this.v * this.dir);
+  else if(this.x < -this.w ||
      this.x > Game.width) {
        this.board.remove(this);
   }
 };
+
+var Water = function() {
+  this.x = 0;
+  this.y = Game.squareLength;
+  this.w = Game.width;
+  this.h = Game.squareLength * 3;
+
+  this.step = function(dt) {
+    var collision = this.board.collide(this,OBJECT_FROG); // TODO la colisión con el agua no funciona
+    if(collision)
+      collision.hit();
+  };
+  this.draw = function(ctx) {};
+};
+
+Water.prototype = new Sprite();
+Water.prototype.type = OBJECT_WATER;
+
+var Death = function(centerX,centerY) {
+  this.setup('death', { frame: 0 });
+  this.x = centerX - this.w/2;
+  this.y = centerY - this.h/2;
+  this.subframe = 0;
+
+  this.step = function(dt) {
+    this.frame = Math.floor(this.subframe++ / 10);
+    if(this.subframe >= 40) {
+      this.board.remove(this);
+    }
+  };
+};
+
+Death.prototype = new Sprite();
 
 var PlayerShip = function() { 
   this.setup('ship', { vx: 0, reloadTime: 0.25, maxVel: 200 });
@@ -333,7 +381,7 @@ var EnemyMissile = function(x,y) {
 };
 
 EnemyMissile.prototype = new Sprite();
-EnemyMissile.prototype.type = OBJECT_ENEMY_PROJECTILE;
+EnemyMissile.prototype.type = OBJECT_WATER;
 
 EnemyMissile.prototype.step = function(dt)  {
   this.y += this.vy * dt;
