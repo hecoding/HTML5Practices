@@ -77,6 +77,7 @@ var playGame = function() {
   board.add(new Trunk({ x: 0 - sprites['trunk'].w, y: 480 - 48 * 6 - sprites['trunk'].h, sprite: 'trunk' }));
   board.add(new Trunk({ x: Game.width, y: 480 - 48 * 7 - sprites['trunk'].h, sprite: 'trunk', dir: -1 }));
   board.add(new Trunk({ x: 0 - sprites['trunk'].w, y: 480 - 48 * 8 - sprites['trunk'].h, sprite: 'trunk' }));
+  board.add(new Water());
 
   Game.setBoard(1, board);
 };
@@ -133,10 +134,6 @@ var Frog = function() {
       this.reload = this.reloadTime;
     }
 
-    var collision = this.board.collide(this,OBJECT_WATER); // TODO la colisión con el agua no funciona
-    if(collision)
-      this.board.remove(this);
-
     // check bounds
     if (this.y < 0) { this.y = 0; }
     else if(this.y > Game.height - this.w) { 
@@ -155,8 +152,14 @@ var Frog = function() {
 Frog.prototype = new Sprite();
 Frog.prototype.type = OBJECT_FROG;
 
-Frog.prototype.onTrunk = function (v) { // TODO hacer que la rana no muera si está sobre tronco. Apartado agua.
+Frog.prototype.onTrunk = function (v) {
   this.vx = v;
+};
+
+Frog.prototype.onWater = function() {
+  var collision = this.board.collide(this,OBJECT_TRUNK);
+  if(!collision)
+    this.hit();
 };
 
 Frog.prototype.hit = function(damage) {
@@ -216,9 +219,9 @@ var Water = function() {
   this.h = Game.squareLength * 3;
 
   this.step = function(dt) {
-    var collision = this.board.collide(this,OBJECT_FROG); // TODO la colisión con el agua no funciona
+    var collision = this.board.collide(this,OBJECT_FROG);
     if(collision)
-      collision.hit();
+      collision.onWater();
   };
   this.draw = function(ctx) {};
 };
