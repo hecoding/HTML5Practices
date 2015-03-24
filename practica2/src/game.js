@@ -45,19 +45,11 @@ var OBJECT_FROG = 1,
     OBJECT_WATER = 8,
     OBJECT_POWERUP = 16;
 
-var startGame = function() { // borrar?
-  var ua = navigator.userAgent.toLowerCase();
-
-  // Only 1 row of stars
-  if(ua.match(/android/)) {
-    Game.setBoard(0,new Starfield(50,0.6,100,true));
-  } else {
-    Game.setBoard(0,new Starfield(20,0.4,100,true));
-    Game.setBoard(1,new Starfield(50,0.6,100));
-    Game.setBoard(2,new Starfield(100,1.0,50));
-  }  
-  Game.setBoard(3,new TitleScreen("Alien Invasion", 
-                                  "Press fire to start playing",
+var startGame = function() {
+  Game.setBoard(0,new Background());
+  
+  Game.setBoard(1,new TitleScreen("Frogger", 
+                                  "Press space to start playing",
                                   playGame));
 };
 
@@ -74,35 +66,30 @@ var level1 = [
 ];
 
 
-
 var playGame = function() {
-  var back = new GameBoard();
-  back.add(new Background());
+  var board = new GameBoard();
+  board.add(new Frog());
+  board.add(new Car(cars.car1));
+  board.add(new Car(cars.car2));
+  board.add(new Car(cars.car3));
+  board.add(new Car(cars.car4));
+  board.add(new Car(cars.car5));
+  board.add(new Trunk({ x: 0 - sprites['trunk'].w, y: 480 - 48 * 6 - sprites['trunk'].h, sprite: 'trunk' }));
+  board.add(new Trunk({ x: Game.width, y: 480 - 48 * 7 - sprites['trunk'].h, sprite: 'trunk', dir: -1 }));
+  board.add(new Trunk({ x: 0 - sprites['trunk'].w, y: 480 - 48 * 8 - sprites['trunk'].h, sprite: 'trunk' }));
 
-  var gameActions = new GameBoard();
-  gameActions.add(new Frog());
-  gameActions.add(new Car(cars.car1));
-  gameActions.add(new Car(cars.car2));
-  gameActions.add(new Car(cars.car3));
-  gameActions.add(new Car(cars.car4));
-  gameActions.add(new Car(cars.car5));
-  gameActions.add(new Trunk({ x: 0 - sprites['trunk'].w, y: 480 - 48 * 6 - sprites['trunk'].h, sprite: 'trunk' }));
-  gameActions.add(new Trunk({ x: Game.width, y: 480 - 48 * 7 - sprites['trunk'].h, sprite: 'trunk', dir: -1 }));
-  gameActions.add(new Trunk({ x: 0 - sprites['trunk'].w, y: 480 - 48 * 8 - sprites['trunk'].h, sprite: 'trunk' }));
-
-  Game.setBoard(1, back);
-  Game.setBoard(2, gameActions);
+  Game.setBoard(1, board);
 };
 
 var winGame = function() {
-  Game.setBoard(3,new TitleScreen("You win!", 
-                                  "Press fire to play again",
+  Game.setBoard(1,new TitleScreen("You win!", 
+                                  "Press space to play again",
                                   playGame));
 };
 
 var loseGame = function() {
-  Game.setBoard(3,new TitleScreen("You lose!", 
-                                  "Press fire to play again",
+  Game.setBoard(1,new TitleScreen("You lose!", 
+                                  "Press space to play again",
                                   playGame));
 };
 
@@ -173,9 +160,9 @@ Frog.prototype.onTrunk = function (v) { // TODO hacer que la rana no muera si es
 };
 
 Frog.prototype.hit = function(damage) {
-  this.board.remove(this);
-  this.board.add (new Death(this.x + this.w/2, 
-                            this.y + this.h/2));
+  if (this.board.remove(this))
+    this.board.add (new Death(this.x + this.w/2, 
+                              this.y + this.h/2));
 };
 
 var Car = function (blueprint,override) {
@@ -249,6 +236,7 @@ var Death = function(centerX,centerY) {
     this.frame = Math.floor(this.subframe++ / 10);
     if(this.subframe >= 40) {
       this.board.remove(this);
+      loseGame();
     }
   };
 };
@@ -395,22 +383,6 @@ EnemyMissile.prototype.step = function(dt)  {
 };
 
 
-
-var Explosion = function(centerX,centerY) {
-  this.setup('explosion', { frame: 0 });
-  this.x = centerX - this.w/2;
-  this.y = centerY - this.h/2;
-};
-
-Explosion.prototype = new Sprite();
-
-Explosion.prototype.step = function(dt) {
-  this.frame++;
-  if(this.frame >= 12) {
-    this.board.remove(this);
-  }
-};
-
 window.addEventListener("load", function() {
-  Game.initialize("game",sprites,playGame);
+  Game.initialize("game",sprites,startGame);
 });
