@@ -26,6 +26,7 @@
 
 var Game = new function() {                                                                  
   var boards = [];
+  var activeBoards = [];
 
   // Game Initialization
   this.initialize = function(canvasElementId,sprite_data,callback) {
@@ -85,7 +86,7 @@ var Game = new function() {
     if(dt > maxTime) { dt = maxTime; }
 
     for(var i=0,len = boards.length;i<len;i++) {
-      if(boards[i]) { 
+      if(boards[i] && activeBoards[i]) { 
         boards[i].step(dt);
         boards[i].draw(Game.ctx);
       }
@@ -93,9 +94,21 @@ var Game = new function() {
     lastTime = curTime;
   };
   
-  // Change an active game board
-  this.setBoard = function(num,board) { boards[num] = board; };
+  // Add and set active a game board
+  this.setBoard = function(num,board) {
+    boards[num] = board;
+    activeBoards[num] = true;
+  };
 
+  this.enableBoard = function(num) {
+    if (activeBoards.hasOwnProperty(num))
+      activeBoards[num] = true;
+  };
+
+  this.disableBoard = function(num) {
+    if (activeBoards.hasOwnProperty(num))
+      activeBoards[num] = false;
+  };
 
   this.setupMobile = function() {
     var container = document.getElementById("container"),

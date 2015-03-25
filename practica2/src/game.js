@@ -43,7 +43,7 @@ var OBJECT_FROG = 1,
     OBJECT_CAR = 2,
     OBJECT_TRUNK = 4,
     OBJECT_WATER = 8,
-    OBJECT_POWERUP = 16;
+    OBJECT_HOME = 16;
 
 var startGame = function() {
   Game.setBoard(0,new Background());
@@ -67,6 +67,8 @@ var level1 = [
 
 
 var playGame = function() {
+  Game.disableBoard(2); // clear titles
+
   var board = new GameBoard();
   board.add(new Frog());
   board.add(new Car(cars.car1));
@@ -78,18 +80,19 @@ var playGame = function() {
   board.add(new Trunk({ x: Game.width, y: 480 - 48 * 7 - sprites['trunk'].h, sprite: 'trunk', dir: -1 }));
   board.add(new Trunk({ x: 0 - sprites['trunk'].w, y: 480 - 48 * 8 - sprites['trunk'].h, sprite: 'trunk' }));
   board.add(new Water());
+  board.add(new Home());
 
   Game.setBoard(1, board);
 };
 
 var winGame = function() {
-  Game.setBoard(1,new TitleScreen("You win!", 
+  Game.setBoard(2,new TitleScreen("You win!", 
                                   "Press space to play again",
                                   playGame));
 };
 
 var loseGame = function() {
-  Game.setBoard(1,new TitleScreen("You lose!", 
+  Game.setBoard(2,new TitleScreen("You lose!", 
                                   "Press space to play again",
                                   playGame));
 };
@@ -106,7 +109,7 @@ var Background = function() {
 Background.prototype = new Sprite();
 
 var Frog = function() {
-  this.setup('frog', { vx: 0, reloadTime: 0.10 });
+  this.setup('frog', { vx: 0, reloadTime: 0.15 });
 
   this.reload = this.reloadTime;
   this.x = Game.width/2 - this.w / 2;
@@ -163,9 +166,11 @@ Frog.prototype.onWater = function() {
 };
 
 Frog.prototype.hit = function(damage) {
-  if (this.board.remove(this))
+  if (this.board.remove(this)) {
     this.board.add (new Death(this.x + this.w/2, 
                               this.y + this.h/2));
+    loseGame();
+  }
 };
 
 var Car = function (blueprint,override) {
@@ -176,7 +181,7 @@ var Car = function (blueprint,override) {
 
 Car.prototype = new Sprite();
 Car.prototype.type = OBJECT_CAR;
-Car.prototype.baseParameters = { type: 1, dir: 1, row: 1, v: 20 }; // row no se usa
+Car.prototype.baseParameters = { dir: 1, v: 20 };
 
 Car.prototype.step = function(dt) {
   this.x += this.v * this.dir * dt;
@@ -229,6 +234,23 @@ var Water = function() {
 Water.prototype = new Sprite();
 Water.prototype.type = OBJECT_WATER;
 
+var Home = function() {
+  this.x = 0;
+  this.y = 0;
+  this.w = Game.width;
+  this.h = Game.squareLength;
+
+  this.step = function(dt) {
+    var collision = this.board.collide(this,OBJECT_FROG);
+    if(collision)
+      winGame();
+  };
+  this.draw = function(ctx) {};
+};
+
+Home.prototype = new Sprite();
+Home.prototype.type = OBJECT_HOME;
+
 var Death = function(centerX,centerY) {
   this.setup('death', { frame: 0 });
   this.x = centerX - this.w/2;
@@ -237,14 +259,63 @@ var Death = function(centerX,centerY) {
 
   this.step = function(dt) {
     this.frame = Math.floor(this.subframe++ / 10);
-    if(this.subframe >= 40) {
+    if(this.subframe >= 40)
       this.board.remove(this);
-      loseGame();
-    }
   };
 };
 
 Death.prototype = new Sprite();
+
+var Spawner = function(obj, levelData) {
+  this.protoObj = obj;
+  this.levelData = [];
+  for(var i =0; i<levelData.length; i++) {
+    this.levelData.push(Object.create(levelData[i]));
+  }
+  this.t = 0;
+  this.callback = callback;
+};
+
+Spawner.prototype.step = function(dt) {
+  var idx = 0, remove = [], curShip = null;
+
+  // Update the current time offset
+  this.t += dt * 1000;
+
+  //   Start, End,  Gap, Type,   Override
+  // [ 0,     4000, 500, 'step', { x: 100 } ]
+  while((curShip = this.levelData[idx]) && 
+        (curShip[0] < this.t + 2000)) {
+    // Check if we've passed the end time 
+    if(this.t > curShip[1]) {
+      remove.push(curShip);
+    } else if(curShip[0] < this.t) {
+      // Get the enemy definition blueprint
+      var enemy = enemies[curShip[3]],
+          override = curShip[4];
+
+      // Add a new enemy with the blueprint and override
+      this.board.add(new Enemy(enemy,override));
+
+      // Increment the start time by the gap
+      curShip[0] += curShip[2];
+    }
+    idx++;
+  }
+
+  // Remove any objects from the levelData that have passed
+  for(var i=0,len=remove.length;i<len;i++) {
+    var remIdx = this.levelData.indexOf(remove[i]);
+    if(remIdx != -1) this.levelData.splice(remIdx,1);
+  }
+
+  // If there are no more enemies on the board or in 
+  // levelData, this level is done
+  if(this.levelData.length === 0 && this.board.cnt[OBJECT_ENEMY] === 0) {
+    if(this.callback) this.callback();
+  }
+
+};
 
 var PlayerShip = function() { 
   this.setup('ship', { vx: 0, reloadTime: 0.25, maxVel: 200 });
