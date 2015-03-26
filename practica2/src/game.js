@@ -15,28 +15,22 @@ var sprites = {
 
 var cars = {
   car1: { x: 320, y: 480 - 48 - sprites['car1'].h, sprite: 'car1',
-          v: 50, dir: -1 },
+          v: 120, dir: -1 },
   car2: { x: 0 - sprites['car2'].w, y: 480 - 48 * 2 - sprites['car2'].h, sprite: 'car2',
-          v: 50 },
+          v: 85 },
   car3: { x: 320, y: 480 - 48 * 3 - sprites['car3'].h, sprite: 'car3',
-          v: 60, dir: -1 },
+          v: 130, dir: -1 },
   car4: { x: 320, y: 480 - 48 * 4 - sprites['car4'].h, sprite: 'car4',
-          v: 60, dir: -1 },
+          v: 80, dir: -1 },
   car5: { x: 0 - sprites['car5'].w, y: 480 - 48 * 5 - sprites['car5'].h, sprite: 'car5',
           v: 50 }
 };
 
-var enemies = {
-  straight: { x: 0,   y: -50, sprite: 'enemy_ship', health: 10, 
-              E: 100 },
-  ltr:      { x: 0,   y: -100, sprite: 'enemy_purple', health: 10, 
-              B: 75, C: 1, E: 100, missiles: 2  },
-  circle:   { x: 250,   y: -50, sprite: 'enemy_circle', health: 10, 
-              A: 0,  B: -100, C: 1, E: 20, F: 100, G: 1, H: Math.PI/2 },
-  wiggle:   { x: 100, y: -50, sprite: 'enemy_bee', health: 20, 
-              B: 50, C: 4, E: 100, firePercentage: 0.001, missiles: 2 },
-  step:     { x: 0,   y: -50, sprite: 'enemy_circle', health: 10,
-              B: 150, C: 1.2, E: 75 }
+var trunks = {
+  trunk: { x: 0 - sprites['trunk'].w, y: 480 - 48 * 6 - sprites['trunk'].h, sprite: 'trunk',
+            v: 100 },
+  trunkBackwards: { x: 320, y: 480 - 48 * 6 - sprites['trunk'].h, sprite: 'trunk',
+            v: 100, dir: -1 }
 };
 
 var OBJECT_FROG = 1,
@@ -53,34 +47,25 @@ var startGame = function() {
                                   playGame));
 };
 
-var level1 = [
- // Start,   End, Gap,  Type,   Override
-  [ 0,      4000,  500, 'step' ],
-  [ 6000,   13000, 800, 'ltr' ],
-  [ 10000,  16000, 400, 'circle' ],
-  [ 17800,  20000, 500, 'straight', { x: 50 } ],
-  [ 18200,  20000, 500, 'straight', { x: 90 } ],
-  [ 18200,  20000, 500, 'straight', { x: 10 } ],
-  [ 22000,  25000, 400, 'wiggle', { x: 150 }],
-  [ 22000,  25000, 400, 'wiggle', { x: 100 }]
-];
-
-
 var playGame = function() {
   Game.disableBoard(2); // clear titles
 
   var board = new GameBoard();
-  board.add(new Frog());
-  board.add(new Car(cars.car1));
-  board.add(new Car(cars.car2));
-  board.add(new Car(cars.car3));
-  board.add(new Car(cars.car4));
-  board.add(new Car(cars.car5));
-  board.add(new Trunk({ x: 0 - sprites['trunk'].w, y: 480 - 48 * 6 - sprites['trunk'].h, sprite: 'trunk' }));
-  board.add(new Trunk({ x: Game.width, y: 480 - 48 * 7 - sprites['trunk'].h, sprite: 'trunk', dir: -1 }));
-  board.add(new Trunk({ x: 0 - sprites['trunk'].w, y: 480 - 48 * 8 - sprites['trunk'].h, sprite: 'trunk' }));
-  board.add(new Water());
-  board.add(new Home());
+  board.add( new Frog() );
+  board.add( new Spawner( new Car(cars.car1), 230 ) );
+  board.add( new Spawner( new Car(cars.car2), 180 ) );
+  board.add( new Spawner( new Car(cars.car3), 320 ) );
+  board.add( new Spawner( new Car(cars.car4), 200 ) );
+  board.add( new Spawner( new Car(cars.car5), 250 ) );
+  board.add( new Spawner( new Trunk(trunks.trunk, { v: 100 }), 200 ) );
+  board.add( new Spawner( new Trunk(trunks.trunkBackwards,
+                                    { y: 480 - 48 * 7 - sprites['trunk'].h }),
+                          340 ) );
+  board.add( new Spawner( new Trunk(trunks.trunk,
+                                    { y: 480 - 48 * 8 - sprites['trunk'].h, v: 170 }),
+                          250 ) );
+  board.add( new Water() );
+  board.add( new Home() );
 
   Game.setBoard(1, board);
 };
@@ -203,7 +188,7 @@ var Trunk = function (blueprint,override) {
 
 Trunk.prototype = new Sprite();
 Trunk.prototype.type = OBJECT_TRUNK;
-Trunk.prototype.baseParameters = { dir: 1, v: 20 };
+Trunk.prototype.baseParameters = { dir: 1, v: 60 };
 
 Trunk.prototype.step = function(dt) {
   this.x += this.v * this.dir * dt;
@@ -266,197 +251,26 @@ var Death = function(centerX,centerY) {
 
 Death.prototype = new Sprite();
 
-var Spawner = function(obj, levelData) {
+var Spawner = function(obj, freq, objProps) {
   this.protoObj = obj;
-  this.levelData = [];
-  for(var i =0; i<levelData.length; i++) {
-    this.levelData.push(Object.create(levelData[i]));
-  }
-  this.t = 0;
-  this.callback = callback;
+  this.objProps = [];
+  this.f = freq;
+  this.subframe = 0;
 };
 
 Spawner.prototype.step = function(dt) {
-  var idx = 0, remove = [], curShip = null;
-
-  // Update the current time offset
-  this.t += dt * 1000;
-
-  //   Start, End,  Gap, Type,   Override
-  // [ 0,     4000, 500, 'step', { x: 100 } ]
-  while((curShip = this.levelData[idx]) && 
-        (curShip[0] < this.t + 2000)) {
-    // Check if we've passed the end time 
-    if(this.t > curShip[1]) {
-      remove.push(curShip);
-    } else if(curShip[0] < this.t) {
-      // Get the enemy definition blueprint
-      var enemy = enemies[curShip[3]],
-          override = curShip[4];
-
-      // Add a new enemy with the blueprint and override
-      this.board.add(new Enemy(enemy,override));
-
-      // Increment the start time by the gap
-      curShip[0] += curShip[2];
-    }
-    idx++;
-  }
-
-  // Remove any objects from the levelData that have passed
-  for(var i=0,len=remove.length;i<len;i++) {
-    var remIdx = this.levelData.indexOf(remove[i]);
-    if(remIdx != -1) this.levelData.splice(remIdx,1);
-  }
-
-  // If there are no more enemies on the board or in 
-  // levelData, this level is done
-  if(this.levelData.length === 0 && this.board.cnt[OBJECT_ENEMY] === 0) {
-    if(this.callback) this.callback();
-  }
-
-};
-
-var PlayerShip = function() { 
-  this.setup('ship', { vx: 0, reloadTime: 0.25, maxVel: 200 });
-
-  this.reload = this.reloadTime;
-  this.x = Game.width/2 - this.w / 2;
-  this.y = Game.height - Game.playerOffset - this.h;
-
-  this.step = function(dt) {
-    if(Game.keys['left']) { this.vx = -this.maxVel; }
-    else if(Game.keys['right']) { this.vx = this.maxVel; }
-    else { this.vx = 0; }
-
-    this.x += this.vx * dt;
-
-    if(this.x < 0) { this.x = 0; }
-    else if(this.x > Game.width - this.w) { 
-      this.x = Game.width - this.w;
-    }
-
-    this.reload-=dt;
-    if(Game.keys['fire'] && this.reload < 0) {
-      Game.keys['fire'] = false;
-      this.reload = this.reloadTime;
-
-      this.board.add(new PlayerMissile(this.x,this.y+this.h/2));
-      this.board.add(new PlayerMissile(this.x+this.w,this.y+this.h/2));
-    }
-  };
-};
-
-PlayerShip.prototype = new Sprite();
-PlayerShip.prototype.type = OBJECT_CAR;
-
-PlayerShip.prototype.hit = function(damage) {
-  if(this.board.remove(this)) {
-    loseGame();
-  }
-};
-
-var PlayerMissile = function(x,y) {
-  this.setup('missile',{ vy: -700, damage: 10 });
-  this.x = x - this.w/2;
-  this.y = y - this.h; 
-};
-
-PlayerMissile.prototype = new Sprite();
-PlayerMissile.prototype.type = OBJECT_CAR;
-
-PlayerMissile.prototype.step = function(dt)  {
-  this.y += this.vy * dt;
-  var collision = this.board.collide(this,OBJECT_TRUNK);
-  if(collision) {
-    collision.hit(this.damage);
-    this.board.remove(this);
-  } else if(this.y < -this.h) { 
-      this.board.remove(this); 
-  }
-};
-
-
-var Enemy = function(blueprint,override) {
-  this.merge(this.baseParameters);
-  this.setup(blueprint.sprite,blueprint);
-  this.merge(override);
-};
-
-Enemy.prototype = new Sprite();
-Enemy.prototype.type = OBJECT_TRUNK;
-
-Enemy.prototype.baseParameters = { A: 0, B: 0, C: 0, D: 0, 
-                                   E: 0, F: 0, G: 0, H: 0,
-                                   t: 0, reloadTime: 0.75, 
-                                   reload: 0 };
-
-Enemy.prototype.step = function(dt) {
   this.t += dt;
 
-  this.vx = this.A + this.B * Math.sin(this.C * this.t + this.D);
-  this.vy = this.E + this.F * Math.sin(this.G * this.t + this.H);
-
-  this.x += this.vx * dt;
-  this.y += this.vy * dt;
-
-  var collision = this.board.collide(this,OBJECT_CAR);
-  if(collision) {
-    collision.hit(this.damage);
-    this.board.remove(this);
-  }
-
-  if(Math.random() < 0.01 && this.reload <= 0) {
-    this.reload = this.reloadTime;
-    if(this.missiles == 2) {
-      this.board.add(new EnemyMissile(this.x+this.w-2,this.y+this.h));
-      this.board.add(new EnemyMissile(this.x+2,this.y+this.h));
-    } else {
-      this.board.add(new EnemyMissile(this.x+this.w/2,this.y+this.h));
-    }
-
-  }
-  this.reload-=dt;
-
-  if(this.y > Game.height ||
-     this.x < -this.w ||
-     this.x > Game.width) {
-       this.board.remove(this);
-  }
+  if (this.subframe++ % this.f === 0)
+    this.board.add(Object.create(this.protoObj, this.objProps));
 };
 
-Enemy.prototype.hit = function(damage) {
-  this.health -= damage;
-  if(this.health <=0) {
-    if(this.board.remove(this)) {
-      Game.points += this.points || 100;
-      this.board.add(new Explosion(this.x + this.w/2, 
-                                   this.y + this.h/2));
-    }
-  }
-};
-
-var EnemyMissile = function(x,y) {
-  this.setup('enemy_missile',{ vy: 200, damage: 10 });
-  this.x = x - this.w/2;
-  this.y = y;
-};
-
-EnemyMissile.prototype = new Sprite();
-EnemyMissile.prototype.type = OBJECT_WATER;
-
-EnemyMissile.prototype.step = function(dt)  {
-  this.y += this.vy * dt;
-  var collision = this.board.collide(this,OBJECT_PLAYER);
-  if(collision) {
-    collision.hit(this.damage);
-    this.board.remove(this);
-  } else if(this.y > Game.height) {
-      this.board.remove(this); 
-  }
-};
+Spawner.prototype.draw = function(ctx) {};
 
 
 window.addEventListener("load", function() {
   Game.initialize("game",sprites,startGame);
 });
+
+// por qué no funciona el space al ganar, y hay que moverse
+// por qué no funcionan las colisiones de los coches si se ponen en la rana
