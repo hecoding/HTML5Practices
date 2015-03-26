@@ -91,7 +91,7 @@ var Background = function() {
   this.step = function(dt) {};
 };
 
-Background.prototype = new Sprite();
+Background.prototype = new Sprite(0);
 
 var Frog = function() {
   this.setup('frog', { vx: 0, reloadTime: 0.15 });
@@ -137,7 +137,7 @@ var Frog = function() {
   };
 };
 
-Frog.prototype = new Sprite();
+Frog.prototype = new Sprite(2);
 Frog.prototype.type = OBJECT_FROG;
 
 Frog.prototype.onTrunk = function (v) {
@@ -164,7 +164,7 @@ var Car = function (blueprint,override) {
   this.merge(override);
 };
 
-Car.prototype = new Sprite();
+Car.prototype = new Sprite(2);
 Car.prototype.type = OBJECT_CAR;
 Car.prototype.baseParameters = { dir: 1, v: 20 };
 
@@ -186,7 +186,7 @@ var Trunk = function (blueprint,override) {
   this.merge(override);
 };
 
-Trunk.prototype = new Sprite();
+Trunk.prototype = new Sprite(1);
 Trunk.prototype.type = OBJECT_TRUNK;
 Trunk.prototype.baseParameters = { dir: 1, v: 60 };
 
@@ -216,7 +216,7 @@ var Water = function() {
   this.draw = function(ctx) {};
 };
 
-Water.prototype = new Sprite();
+Water.prototype = new Sprite(1);
 Water.prototype.type = OBJECT_WATER;
 
 var Home = function() {
@@ -224,16 +224,19 @@ var Home = function() {
   this.y = 0;
   this.w = Game.width;
   this.h = Game.squareLength;
+  this.reached = false;
 
   this.step = function(dt) {
     var collision = this.board.collide(this,OBJECT_FROG);
-    if(collision)
+    if(collision && !this.reached) {
+      this.reached = true;
       winGame();
+    }
   };
   this.draw = function(ctx) {};
 };
 
-Home.prototype = new Sprite();
+Home.prototype = new Sprite(1);
 Home.prototype.type = OBJECT_HOME;
 
 var Death = function(centerX,centerY) {
@@ -249,7 +252,7 @@ var Death = function(centerX,centerY) {
   };
 };
 
-Death.prototype = new Sprite();
+Death.prototype = new Sprite(2);
 
 var Spawner = function(obj, freq, objProps) {
   this.protoObj = obj;
@@ -273,4 +276,6 @@ window.addEventListener("load", function() {
 });
 
 // por qué no funciona el space al ganar, y hay que moverse
-// por qué no funcionan las colisiones de los coches si se ponen en la rana
+// por qué no funcionan las colisiones de los coches si se ponen en la rana | sí funsiona
+// si está bien usar una PQueue para el zIndex | hacer un sort al meter y punto
+// por qué hay una franja de 1px en la derecha que no pinta bien | bug

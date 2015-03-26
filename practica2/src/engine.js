@@ -207,7 +207,9 @@ var GameBoard = function() {
   // Add a new object to the object list
   this.add = function(obj) { 
     obj.board=this; 
-    this.objects.push(obj); 
+    this.objects.push(obj);
+    // nasty fix to make use of the zIndex
+    this.objects.sort(function(a, b) { return a.zIndex - b.zIndex });
     this.cnt[obj.type] = (this.cnt[obj.type] || 0) + 1;
     return obj; 
   };
@@ -288,7 +290,9 @@ var GameBoard = function() {
 
 };
 
-var Sprite = function() { };
+var Sprite = function(zInd) {
+  this.zIndex = zInd;
+};
 
 Sprite.prototype.setup = function(sprite,props) {
   this.sprite = sprite;
