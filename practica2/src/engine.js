@@ -162,15 +162,32 @@ var SpriteSheet = new function() {
     this.image.src = 'img/spritesFrogger.png';
   };
 
-  this.draw = function(ctx,sprite,x,y,frame) {
+  this.drawRotated = function(ctx,sprite,x,y,frame,angle) {
     var s = this.map[sprite];
-    if(!frame) frame = 0;
+    ctx.save();
+    ctx.translate(x+Math.floor(s.w/2),y+Math.floor(s.h/2));
+    ctx.rotate(Math.PI/180 * angle);
     ctx.drawImage(this.image,
                      s.sx + frame * s.w, 
                      s.sy, 
                      s.w, s.h, 
-                     Math.floor(x), Math.floor(y),
+                     -Math.floor(s.w/2), -Math.floor(s.h/2),
                      s.w, s.h);
+    ctx.restore();
+  };
+
+  this.draw = function(ctx,sprite,x,y,frame,angle) {
+    var s = this.map[sprite];
+    if(!frame) frame = 0;
+    if (angle)
+      this.drawRotated(ctx,sprite,x,y,frame,angle);
+    else
+      ctx.drawImage(this.image,
+                       s.sx + frame * s.w, 
+                       s.sy, 
+                       s.w, s.h, 
+                       Math.floor(x), Math.floor(y),
+                       s.w, s.h);
   };
 
   return this;
@@ -311,7 +328,7 @@ Sprite.prototype.merge = function(props) {
 };
 
 Sprite.prototype.draw = function(ctx) {
-  SpriteSheet.draw(ctx,this.sprite,this.x,this.y,this.frame);
+  SpriteSheet.draw(ctx,this.sprite,this.x,this.y,this.frame,this.angle);
 };
 
 Sprite.prototype.hit = function(damage) {

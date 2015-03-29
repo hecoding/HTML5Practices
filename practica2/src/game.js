@@ -94,43 +94,146 @@ var Background = function() {
 Background.prototype = new Sprite(0);
 
 var Frog = function() {
-  this.setup('frog', { vx: 0, reloadTime: 0.15 });
+  this.setup('frog', { vx: 0, jumpSpeed: 260, frame: 2 });
 
-  this.reload = this.reloadTime;
   this.x = Game.width/2 - this.w / 2;
   this.y = Game.height - this.h;
+  this.reloadTime = Game.squareLength / this.jumpSpeed;
+  this.reload = this.reloadTime;
+  this.angle = 0;
+  this.isMovingUp = false;
+  this.isMovingDown = false;
+  this.isMovingLeft = false;
+  this.isMovingRight = false;
 
-  this.step = function(dt) { //TODO hacer que salte fluido
+  this.step = function(dt) {
     this.reload -= dt;
     this.x += this.vx * dt;
 
-    // when player moves the froglet
-    if (Game.keys['up'] && this.reload < 0) {
-      this.y -= Game.squareLength;
-      this.reload = this.reloadTime;
+    if (this.isMovingUp || (Game.keys['up'] && this.reload < 0)) {
+      if (!this.isMovingUp) {
+        this.isMovingUp = true;
+        this.prevPosition = this.y;
+        this.angle = 0;
+        this.reload = this.reloadTime;
+      }
+
+      this.y -= this.jumpSpeed * dt;
+      // if it's on the first half of the jump
+      if (Game.squareLength / Math.abs(this.prevPosition - this.y) >= 2)
+        this.frame = 1;
+      else
+        this.frame = 0;
+
+      // if ends moving
+      if (this.y <= this.prevPosition - this.h) {
+        // stand on right position for the collision to work
+        this.y = this.prevPosition - this.h;
+
+        this.isMovingUp = false;
+        this.frame = 2;
+      }
     }
-    else if (Game.keys['down'] && this.reload < 0) {
-      this.y += Game.squareLength;
-      this.reload = this.reloadTime;
+    else if (this.isMovingDown || (Game.keys['down'] && this.reload < 0)) {
+      if (!this.isMovingDown) {
+        this.isMovingDown = true;
+        this.prevPosition = this.y;
+        this.angle = 180;
+        this.reload = this.reloadTime;
+      }
+
+      this.y += this.jumpSpeed * dt;
+      // if it's on the first half of the jump
+      if (Game.squareLength / Math.abs(this.prevPosition - this.y) >= 2)
+        this.frame = 1;
+      else
+        this.frame = 0;
+
+      // if ends moving
+      if (this.y >= this.prevPosition + this.h) {
+        // stand on right position for the collision to work
+        this.y = this.prevPosition + this.h;
+
+        this.isMovingDown = false;
+        this.frame = 2;
+      }
     }
-    else if (Game.keys['left'] && this.reload < 0) {
-      this.x -= Game.squareLength;
-      this.reload = this.reloadTime;
+    else if (this.isMovingLeft || (Game.keys['left'] && this.reload < 0)) {
+      this.angle = 270;
+      if (!this.isMovingLeft) {
+        this.isMovingLeft = true;
+        this.prevPosition = this.x;
+        this.angle = 0;
+        this.reload = this.reloadTime;
+      }
+
+      this.x -= this.jumpSpeed * dt;
+      // if it's on the first half of the jump
+      if (Game.squareLength / Math.abs(this.prevPosition - this.x) >= 2)
+        this.frame = 1;
+      else
+        this.frame = 0;
+
+      // if ends moving
+      if (this.x <= this.prevPosition - this.w) {
+        // stand on right position for the collision to work
+        this.x = this.prevPosition - this.w;
+
+        this.isMovingLeft = false;
+        this.frame = 2;
+      }
     }
-    else if (Game.keys['right'] && this.reload < 0) {
-      this.x += Game.squareLength;
-      this.reload = this.reloadTime;
+    else if (this.isMovingRight || (Game.keys['right'] && this.reload < 0)) {
+      this.angle = 90;
+      if (!this.isMovingRight) {
+        this.isMovingRight = true;
+        this.prevPosition = this.x;
+        this.angle = 180;
+        this.reload = this.reloadTime;
+      }
+
+      this.x += this.jumpSpeed * dt;
+      // if it's on the first half of the jump
+      if (Game.squareLength / Math.abs(this.prevPosition - this.x) >= 2)
+        this.frame = 1;
+      else
+        this.frame = 0;
+
+      // if ends moving
+      if (this.x >= this.prevPosition + this.w) {
+        // stand on right position for the collision to work
+        this.x = this.prevPosition + this.w;
+
+        this.isMovingRight = false;
+        this.frame = 2;
+      }
     }
 
     // check bounds
-    if (this.y < 0) { this.y = 0; }
+    if (this.y < 0) {
+      this.y = 0;
+      this.isMovingUp = false;
+      this.frame = 2;
+      this.angle = 0;
+    }
     else if(this.y > Game.height - this.w) { 
       this.y = Game.height - this.w;
+      this.isMovingDown = false;
+      this.frame = 2;
+      this.angle = 180;
     }
 
-    if(this.x < 0) { this.x = 0; }
+    if(this.x < 0) {
+      this.x = 0;
+      this.isMovingLeft = false;
+      this.frame = 2;
+      this.angle = 270;
+    }
     else if(this.x > Game.width - this.w) { 
       this.x = Game.width - this.w;
+      this.isMovingRight = false;
+      this.frame = 2;
+      this.angle = 90;
     }
 
     this.vx = 0;
@@ -279,3 +382,10 @@ window.addEventListener("load", function() {
 // por qué no funcionan las colisiones de los coches si se ponen en la rana | sí funsiona
 // si está bien usar una PQueue para el zIndex | hacer un sort al meter y punto
 // por qué hay una franja de 1px en la derecha que no pinta bien | bug
+
+// para documentación;
+// al usar velocidad en el salto de la rana reloadTime ya no es necesario y se espera a que termine el salto
+// zIndex implementado con un pordiosero sort en el GameBoard.add
+// añadida rotación para cuando salta la rana hacia los lados (objeto Frog) y método para dibujar rotando el canvax
+// TODO cambiar zIndex a inicialización en vez de argumento (y ponerlo por defecto en la constr a un 1)
+// TODO refactorizar la cosa horrenda del step de Frog
