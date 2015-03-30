@@ -38,7 +38,7 @@ var Game = new function() {
 
     this.squareLength = 48;
     this.width = this.canvas.width;
-    this.height = this.canvas.height - this.squareLength;
+    this.height = 480;
     this.canvasHeight = this.canvas.height;
     this.canvasWidth = this.canvas.width;
     this.initialLives = this.lives = 3;
@@ -128,6 +128,15 @@ var Game = new function() {
     board.finalizeRemoved();
   };
 
+  this.hitTheFrog = function(boardNum) {
+    var board = boards[boardNum];
+
+    for (obj in board.objects) {
+      if (board.objects[obj].sprite == 'frog')
+        board.objects[obj].hit();
+    }
+  };
+
   this.setupMobile = function() {
     var container = document.getElementById("container"),
         hasTouch =  !!('ontouchstart' in window),
@@ -178,6 +187,20 @@ var Game = new function() {
 
   this.restartLives = function() {
     this.lives = this.initialLives;
+  };
+
+  this.beginTime = function() {
+    // pedazo de chapa
+    var board = boards[2];
+    board.objects[0].beginTime();
+  };
+
+  this.restartTime = this.beginTime;
+
+  this.stopTime = function() {
+    // pedazo de chapa
+    var board = boards[2];
+    board.objects[0].stopTime();
   };
 
 };

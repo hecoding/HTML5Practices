@@ -96,16 +96,19 @@ var playGame = function() {
 
   Game.removeObjFromBoard('frog', GAME_BOARD);
   Game.getBoard(GAME_BOARD).add( new Frog() );
-  Game.setLives(3);  
+  Game.setLives(3);
+  Game.beginTime();
 };
 
 var winGame = function() {
   Game.enableBoard(WINNER_BOARD);
+  Game.stopTime();
   
 };
 
 var loseGame = function() {
   Game.enableBoard(LOSER_BOARD);
+  Game.stopTime();
 };
 
 var Background = function() {
@@ -124,6 +127,7 @@ var Frog = function() {
 
   this.x = Game.width/2 - this.w / 2;
   this.y = Game.height - this.h;
+  // it's ok to set more reload time but never less than this formula or will turn glitchy
   this.reloadTime = Game.squareLength / this.jumpSpeed;
   this.reload = this.reloadTime;
   this.angle = 0;
@@ -299,6 +303,7 @@ Frog.prototype.onWater = function() {
 
 Frog.prototype.hit = function(damage) {
   Game.subLive();
+  Game.restartTime();
   this.board.add (new Death(this.x + this.w/2, 
                             this.y + this.h/2));
   this.toInitPos();
@@ -427,16 +432,21 @@ var Info = function() {
   this.infoBoard.width = Game.canvasWidth; 
   this.infoBoard.height = Game.canvasHeight;
   var infoCtx = this.infoBoard.getContext("2d");
-
-  // infoCtx.font = '40px "Press Start 2P"';
-  // infoCtx.fillStyle="#FFF";
-  // infoCtx.fillText("PENES",0,Game.canvasHeight - Game.squareLength);
+  this.originalLifeTime = this.lifeTime = 30;
+  this.timeIsRunning = false;
 
   this.step = function(dt) {
+    if (this.timeIsRunning)
+      this.lifeTime -= dt;
     
+    if (this.lifeTime < 0) {
+      Game.hitTheFrog(GAME_BOARD);
+      this.lifeTime = this.originalLifeTime;
+    }
   };
 
   this.draw = function(ctx) {
+    var percentage = this.lifeTime / this.originalLifeTime;
     infoCtx.clearRect(0,0,this.infoBoard.width, this.infoBoard.height);
     infoCtx.fillStyle="black";
     infoCtx.fillRect(0,Game.height,Game.canvasWidth,48);
@@ -445,10 +455,29 @@ var Info = function() {
     infoCtx.drawImage(SpriteSheet.image,
                       sprites['frog'].sx,sprites['frog'].sy,
                       sprites['frog'].w, sprites['frog'].h,
-                      24 * i,Game.height,
-                      24,24);
+                      Game.squareLength / 2 * i, Game.height,
+                      Game.squareLength / 2, Game.squareLength / 2);
+
+    infoCtx.fillStyle="green";
+    infoCtx.fillRect(0, Game.height + Game.squareLength / 2,
+                    Game.canvasWidth * percentage, Game.canvasHeight - Game.height - Game.squareLength / 2);
+
+    // if (percentage < 0.2) {
+    //   infoCtx.font = '12px bangers';
+    //   infoCtx.fillStyle="red";
+    //   infoCtx.fillText("YOU'RE RUNNING OUT OF TIME",5,Game.height + 35);
+    // }
 
     ctx.drawImage(this.infoBoard,0,0);
+  };
+
+  this.beginTime = function() {
+    this.lifeTime = this.originalLifeTime;
+    this.timeIsRunning = true;
+  };
+
+  this.stopTime = function() {
+    this.timeIsRunning = false;
   };
 };
 
@@ -464,10 +493,12 @@ window.addEventListener("load", function() {
 // si está bien usar una PQueue para el zIndex | hacer un sort al meter y punto
 // por qué hay una franja de 1px en la derecha que no pinta bien | bug
 // cambiar zIndex a inicialización en vez de argumento (y ponerlo por defecto en la constr a un 1) | no lo veo necesario
+// no sé si la cuenta del tiempo la tiene que llevar Game, y si lo tienen que decrementar de fuera (de Info?)
 
 // para documentación;
 // al usar velocidad en el salto de la rana reloadTime ya no es necesario y se espera a que termine el salto
 // zIndex implementado con un pordiosero sort en el GameBoard.add
 // añadida rotación para cuando salta la rana hacia los lados (objeto Frog) y método para dibujar rotando el canvax
 // añadidas vidas. modificado tamaño de canvas, clase Info añadida, modificada clase Frog, modificada clase Game (1 atrib, 3 métodos añadidos)
+// añadido tiempo y muerte por tiempo. métodos en Game añadidos (una chapa) y el contador en la clase Info
 // TODO refactorizar la cosa horrenda del step de Frog
