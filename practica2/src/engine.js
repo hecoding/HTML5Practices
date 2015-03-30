@@ -36,9 +36,12 @@ var Game = new function() {
     this.canvasMultiplier= 1;
     this.setupMobile();
 
-    this.width = this.canvas.width;
-    this.height = this.canvas.height;
     this.squareLength = 48;
+    this.width = this.canvas.width;
+    this.height = this.canvas.height - this.squareLength;
+    this.canvasHeight = this.canvas.height;
+    this.canvasWidth = this.canvas.width;
+    this.initialLives = this.lives = 3;
 
     this.ctx = this.canvas.getContext && this.canvas.getContext('2d');
     if(!this.ctx) { return alert("Please upgrade your browser to play"); }
@@ -147,6 +150,19 @@ var Game = new function() {
     this.canvas.style.left="0px";
     this.canvas.style.top="0px";
 
+  };
+
+  this.setLives = function(l) {
+    this.initialLives = l;
+    this.restartLives();
+  };
+
+  this.subLive = function() {
+    this.lives--;
+  };
+
+  this.restartLives = function() {
+    this.lives = this.initialLives;
   };
 
 };

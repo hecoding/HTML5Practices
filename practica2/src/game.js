@@ -49,6 +49,7 @@ var startGame = function() {
 
 var playGame = function() {
   Game.disableBoard(2); // clear titles
+  Game.setLives(3);
 
   var board = new GameBoard();
   board.add( new Frog() );
@@ -66,6 +67,7 @@ var playGame = function() {
                           250 ) );
   board.add( new Water() );
   board.add( new Home() );
+  board.add( new Info() ); // TODO poner en otra board
 
   Game.setBoard(1, board);
 };
@@ -238,6 +240,16 @@ var Frog = function() {
 
     this.vx = 0;
   };
+
+  this.toInitPos = function() {
+    this.reload = this.reloadTime;
+    this.frame = 2;
+    this.angle = 0;
+    this.isMovingUp = false;
+    this.isMovingDown = false;
+    this.isMovingLeft = false;
+    this.isMovingRight = false;
+  };
 };
 
 Frog.prototype = new Sprite(2);
@@ -254,10 +266,19 @@ Frog.prototype.onWater = function() {
 };
 
 Frog.prototype.hit = function(damage) {
-  if (this.board.remove(this)) {
-    this.board.add (new Death(this.x + this.w/2, 
-                              this.y + this.h/2));
-    loseGame();
+  Game.subLive();
+  this.toInitPos();
+
+  if (Game.lives === 0) {
+    if (this.board.remove(this)) {
+      this.board.add (new Death(this.x + this.w/2, 
+                                this.y + this.h/2));
+      loseGame();
+    }
+  }
+  else {
+    this.x = Game.width/2 - this.w / 2;
+    this.y = Game.height - this.h;
   }
 };
 
@@ -373,6 +394,38 @@ Spawner.prototype.step = function(dt) {
 
 Spawner.prototype.draw = function(ctx) {};
 
+var Info = function() {
+  this.infoBoard = document.createElement("canvas");
+  this.infoBoard.width = Game.canvasWidth; 
+  this.infoBoard.height = Game.canvasHeight;
+  var infoCtx = this.infoBoard.getContext("2d");
+
+  // infoCtx.font = '40px "Press Start 2P"';
+  // infoCtx.fillStyle="#FFF";
+  // infoCtx.fillText("PENES",0,Game.canvasHeight - Game.squareLength);
+
+  this.step = function(dt) {
+    
+  };
+
+  this.draw = function(ctx) {
+    infoCtx.clearRect(0,0,this.infoBoard.width, this.infoBoard.height);
+    infoCtx.fillStyle="black";
+    infoCtx.fillRect(0,Game.height,Game.canvasWidth,48);
+    
+    for (var i = 0; i < Game.lives; i++)
+    infoCtx.drawImage(SpriteSheet.image,
+                      sprites['frog'].sx,sprites['frog'].sy,
+                      sprites['frog'].w, sprites['frog'].h,
+                      24 * i,Game.height,
+                      24,24);
+
+    ctx.drawImage(this.infoBoard,0,0);
+  };
+};
+
+Info.prototype = new Sprite(3);
+
 
 window.addEventListener("load", function() {
   Game.initialize("game",sprites,startGame);
@@ -387,5 +440,6 @@ window.addEventListener("load", function() {
 // al usar velocidad en el salto de la rana reloadTime ya no es necesario y se espera a que termine el salto
 // zIndex implementado con un pordiosero sort en el GameBoard.add
 // añadida rotación para cuando salta la rana hacia los lados (objeto Frog) y método para dibujar rotando el canvax
-// TODO cambiar zIndex a inicialización en vez de argumento (y ponerlo por defecto en la constr a un 1)
+// añadidas vidas. clase Info añadida, modificada clase Frog, modificada clase Game (1 atrib, 3 métodos añadidos)
+// TODO cambiar zIndex a inicialización en vez de argumento (y ponerlo por defecto en la constr a un 1) | no lo veo necesario
 // TODO refactorizar la cosa horrenda del step de Frog
