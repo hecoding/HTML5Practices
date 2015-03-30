@@ -39,49 +39,73 @@ var OBJECT_FROG = 1,
     OBJECT_WATER = 8,
     OBJECT_HOME = 16;
 
+var BG_BOARD = 0,
+    GAME_BOARD = 1,
+    STATS_BOARD = 2,
+    TITLE_BOARD = 3,
+    LOSER_BOARD = 4,
+    WINNER_BOARD = 5;
+
 var startGame = function() {
-  Game.setBoard(0,new Background());
+  Game.setBoard(BG_BOARD,new Background());
+
+  var gameBoard = new GameBoard();
+  gameBoard.add( new Spawner( new Car(cars.car1), 230 ) );
+  gameBoard.add( new Spawner( new Car(cars.car2), 180 ) );
+  gameBoard.add( new Spawner( new Car(cars.car3), 320 ) );
+  gameBoard.add( new Spawner( new Car(cars.car4), 200 ) );
+  gameBoard.add( new Spawner( new Car(cars.car5), 250 ) );
+  gameBoard.add( new Spawner( new Trunk(trunks.trunk, { v: 100 }), 200 ) );
+  gameBoard.add( new Spawner( new Trunk(trunks.trunkBackwards,
+                                        { y: 480 - 48 * 7 - sprites['trunk'].h }),
+                              340 ) );
+  gameBoard.add( new Spawner( new Trunk(trunks.trunk,
+                                        { y: 480 - 48 * 8 - sprites['trunk'].h, v: 170 }),
+                              250 ) );
+  gameBoard.add( new Water() );
+  gameBoard.add( new Home() );
+  Game.setBoard(GAME_BOARD, gameBoard);
+
+  var stats = new GameBoard();
+  stats.add( new Info() );
+  Game.setBoard(STATS_BOARD, stats);
+  Game.disableBoard(STATS_BOARD);
   
-  Game.setBoard(1,new TitleScreen("Frogger", 
-                                  "Press space to start playing",
-                                  playGame));
+  Game.setBoard(TITLE_BOARD,new TitleScreen("Frogger", 
+                                            "Press space to start playing",
+                                            playGame));
+
+  Game.setBoard(LOSER_BOARD,new TitleScreen("You lose!", 
+                                            "Press space to play again",
+                                            playGame));
+  Game.disableBoard(LOSER_BOARD);
+
+  Game.setBoard(WINNER_BOARD,new TitleScreen("You win!", 
+                                            "Press space to play again",
+                                            playGame));
+  Game.disableBoard(WINNER_BOARD);
 };
 
 var playGame = function() {
-  Game.disableBoard(2); // clear titles
-  Game.setLives(3);
+  Game.disableBoard(TITLE_BOARD);
+  Game.disableBoard(LOSER_BOARD);
+  Game.disableBoard(WINNER_BOARD);
+  Game.enableBoard(BG_BOARD);
+  Game.enableBoard(GAME_BOARD);
+  Game.enableBoard(STATS_BOARD);
 
-  var board = new GameBoard();
-  board.add( new Frog() );
-  board.add( new Spawner( new Car(cars.car1), 230 ) );
-  board.add( new Spawner( new Car(cars.car2), 180 ) );
-  board.add( new Spawner( new Car(cars.car3), 320 ) );
-  board.add( new Spawner( new Car(cars.car4), 200 ) );
-  board.add( new Spawner( new Car(cars.car5), 250 ) );
-  board.add( new Spawner( new Trunk(trunks.trunk, { v: 100 }), 200 ) );
-  board.add( new Spawner( new Trunk(trunks.trunkBackwards,
-                                    { y: 480 - 48 * 7 - sprites['trunk'].h }),
-                          340 ) );
-  board.add( new Spawner( new Trunk(trunks.trunk,
-                                    { y: 480 - 48 * 8 - sprites['trunk'].h, v: 170 }),
-                          250 ) );
-  board.add( new Water() );
-  board.add( new Home() );
-  board.add( new Info() ); // TODO poner en otra board
-
-  Game.setBoard(1, board);
+  Game.removeObjFromBoard('frog', GAME_BOARD);
+  Game.getBoard(GAME_BOARD).add( new Frog() );
+  Game.setLives(3);  
 };
 
 var winGame = function() {
-  Game.setBoard(2,new TitleScreen("You win!", 
-                                  "Press space to play again",
-                                  playGame));
+  Game.enableBoard(WINNER_BOARD);
+  
 };
 
 var loseGame = function() {
-  Game.setBoard(2,new TitleScreen("You lose!", 
-                                  "Press space to play again",
-                                  playGame));
+  Game.enableBoard(LOSER_BOARD);
 };
 
 var Background = function() {
@@ -214,28 +238,36 @@ var Frog = function() {
     // check bounds
     if (this.y < 0) {
       this.y = 0;
-      this.isMovingUp = false;
       this.frame = 2;
-      this.angle = 0;
+      if (this.isMovingUp) {
+        this.angle = 0;
+        this.isMovingUp = false;
+      }
     }
     else if(this.y > Game.height - this.w) { 
       this.y = Game.height - this.w;
-      this.isMovingDown = false;
       this.frame = 2;
-      this.angle = 180;
+      if (this.isMovingDown) {
+        this.angle = 180;
+        this.isMovingDown = false;
+      }
     }
 
     if(this.x < 0) {
       this.x = 0;
-      this.isMovingLeft = false;
       this.frame = 2;
-      this.angle = 270;
+      if (this.isMovingLeft) {
+        this.angle = 270;
+        this.isMovingLeft = false;
+      }
     }
     else if(this.x > Game.width - this.w) { 
       this.x = Game.width - this.w;
-      this.isMovingRight = false;
       this.frame = 2;
-      this.angle = 90;
+      if (this.isMovingRight) {
+        this.angle = 90;
+        this.isMovingRight = false;
+      }
     }
 
     this.vx = 0;
@@ -267,14 +299,13 @@ Frog.prototype.onWater = function() {
 
 Frog.prototype.hit = function(damage) {
   Game.subLive();
+  this.board.add (new Death(this.x + this.w/2, 
+                            this.y + this.h/2));
   this.toInitPos();
 
   if (Game.lives === 0) {
-    if (this.board.remove(this)) {
-      this.board.add (new Death(this.x + this.w/2, 
-                                this.y + this.h/2));
+    if (this.board.remove(this))
       loseGame();
-    }
   }
   else {
     this.x = Game.width/2 - this.w / 2;
@@ -348,14 +379,11 @@ var Home = function() {
   this.y = 0;
   this.w = Game.width;
   this.h = Game.squareLength;
-  this.reached = false;
 
   this.step = function(dt) {
     var collision = this.board.collide(this,OBJECT_FROG);
-    if(collision && !this.reached) {
-      this.reached = true;
+    if(collision)
       winGame();
-    }
   };
   this.draw = function(ctx) {};
 };
@@ -424,7 +452,7 @@ var Info = function() {
   };
 };
 
-Info.prototype = new Sprite(3);
+Info.prototype = new Sprite(1);
 
 
 window.addEventListener("load", function() {
@@ -435,11 +463,11 @@ window.addEventListener("load", function() {
 // por qué no funcionan las colisiones de los coches si se ponen en la rana | sí funsiona
 // si está bien usar una PQueue para el zIndex | hacer un sort al meter y punto
 // por qué hay una franja de 1px en la derecha que no pinta bien | bug
+// cambiar zIndex a inicialización en vez de argumento (y ponerlo por defecto en la constr a un 1) | no lo veo necesario
 
 // para documentación;
 // al usar velocidad en el salto de la rana reloadTime ya no es necesario y se espera a que termine el salto
 // zIndex implementado con un pordiosero sort en el GameBoard.add
 // añadida rotación para cuando salta la rana hacia los lados (objeto Frog) y método para dibujar rotando el canvax
-// añadidas vidas. clase Info añadida, modificada clase Frog, modificada clase Game (1 atrib, 3 métodos añadidos)
-// TODO cambiar zIndex a inicialización en vez de argumento (y ponerlo por defecto en la constr a un 1) | no lo veo necesario
+// añadidas vidas. modificado tamaño de canvas, clase Info añadida, modificada clase Frog, modificada clase Game (1 atrib, 3 métodos añadidos)
 // TODO refactorizar la cosa horrenda del step de Frog

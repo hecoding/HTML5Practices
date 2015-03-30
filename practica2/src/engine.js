@@ -113,6 +113,21 @@ var Game = new function() {
       activeBoards[num] = false;
   };
 
+  this.getBoard = function(i) {
+    return boards[i];
+  };
+
+  this.removeObjFromBoard = function(spriteName,boardNum) {
+    var board = boards[boardNum];
+
+    for (obj in board.objects) {
+      if (board.objects[obj].sprite == spriteName)
+        board.remove(board.objects[obj]);
+    }
+
+    board.finalizeRemoved();
+  };
+
   this.setupMobile = function() {
     var container = document.getElementById("container"),
         hasTouch =  !!('ontouchstart' in window),
