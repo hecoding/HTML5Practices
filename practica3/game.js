@@ -17,6 +17,9 @@ var game = function () {
 		Q.stageScene("level1", 0);
 	});
 
+	// asynchronous load, it's a bad practice to code it like that
+	Q.load("princess.png");
+
 	Q.Sprite.extend("Mario", {
 		init: function(p) {
 			this._super(p, {
@@ -41,7 +44,8 @@ var game = function () {
 		},
 
 		die: function() {
-			Q.stageScene("endGame",1);
+			this.destroy();
+			Q.stageScene("loseGame",1);
 		}
 	});
 
@@ -58,8 +62,8 @@ var game = function () {
 
 			this.on("bump.left,bump.right,bump.bottom", function (collision) {
 				if(collision.obj.isA("Mario")) { 
-					Q.stageScene("endGame", 1); 
-					collision.obj.destroy();
+					Q.stageScene("loseGame", 1); 
+					collision.obj.die();
 				}
 			});
 
@@ -86,21 +90,45 @@ var game = function () {
 
 			this.on("bump.left,bump.right,bump.bottom, bump.bottom", function (collision) {
 				if(collision.obj.isA("Mario")) { 
-					Q.stageScene("endGame", 1); 
-					collision.obj.destroy();
+					Q.stageScene("loseGame", 1); 
+					collision.obj.die();
 				}
 			});
 
 			this.on("bump.top", function (collision) {
 				if(collision.obj.isA("Mario")) { 
 					this.destroy();
+					collision.obj.p.vy = -300;
 				}
-			}); 
+			});
 		},
 
 		step: function(dt) {
 			if (this.p.vy === 0) this.p.vy = -300;
 		}
+	});
+
+	Q.Sprite.extend("Princess", {
+		init: function(p) {
+			this._super({
+				asset: "princess.png",
+				x: 2000,
+				y: 450,
+				sensor: true,
+				sensorActivated: false
+			});
+    
+			this.on("sensor");
+		},
+
+		sensor: function() {
+			if (!this.sensorActivated) {
+				this.sensorActivated = true;
+				Q.stageScene("winGame", 1);
+			}
+		},
+
+		step: function(dt) { }
 	});
 
 	Q.scene("level1", function(stage) {
@@ -110,13 +138,14 @@ var game = function () {
 
 		stage.insert( new Q.Goomba() );
 		stage.insert( new Q.Bloopa() );
+		stage.insert( new Q.Princess() );
 
 		// set the camera
 		stage.viewport.offsetY = 155;
 		stage.centerOn(150, 380);
 	});
 
-	Q.scene("endGame", function (stage) {
+	Q.scene("loseGame", function (stage) {
 		var container = stage.insert(new Q.UI.Container({
 			x: Q.width/2, y: Q.height/2, fill: "rgba(0,0,0,0.5)"
 		}));
@@ -125,6 +154,23 @@ var game = function () {
                                                   label: "Play Again" }))         
 		var label = container.insert(new Q.UI.Text({x:10, y: -10 - button.p.h, 
                                                    label: "Game over" }));
+		button.on("click",function() {
+			Q.clearStages();
+			Q.stageScene('level1');
+		});
+
+		container.fit(20);
+	});
+
+	Q.scene("winGame", function (stage) {
+		var container = stage.insert(new Q.UI.Container({
+			x: Q.width/2, y: Q.height/2, fill: "rgba(0,0,0,0.5)"
+		}));
+
+		var button = container.insert(new Q.UI.Button({ x: 0, y: 0, fill: "#CCCCCC",
+                                                  label: "Play Again?" }))         
+		var label = container.insert(new Q.UI.Text({x:10, y: -10 - button.p.h, 
+                                                   label: "You won!" }));
 		button.on("click",function() {
 			Q.clearStages();
 			Q.stageScene('level1');
