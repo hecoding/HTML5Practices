@@ -10,16 +10,127 @@ var game = function () {
 
 
 
-	Q.loadTMX("level.tmx, mario_small.png, mario_small.json", function() {
+	Q.loadTMX("level.tmx, mario_small.png, mario_small.json, goomba.png, goomba.json, bloopa.png, bloopa.json", function() {
 		Q.compileSheets("mario_small.png","mario_small.json");
-		Q.stageScene("level1");
+		Q.compileSheets("goomba.png", "goomba.json");
+		Q.compileSheets("bloopa.png", "bloopa.json");
+		Q.stageScene("level1", 0);
+	});
+
+	Q.Sprite.extend("Mario", {
+		init: function(p) {
+			this._super(p, {
+				sheet: "marioR",
+				x: 150,
+				y: 380
+			});
+
+			this.add("2d, platformerControls");
+		},
+
+		step: function(dt) {
+			if(Q.inputs['left'] && this.p.direction == 'right')
+				this.p.flip = 'x';
+			
+			if(Q.inputs['right']  && this.p.direction == 'left')
+				this.p.flip = false;
+
+			// check bounds
+			if (this.p.y > 600)
+				this.die();
+		},
+
+		die: function() {
+			Q.stageScene("endGame",1);
+		}
+	});
+
+	Q.Sprite.extend("Goomba", {
+		init: function(p) {
+			this._super({
+				sheet: "goomba",
+				x: 350,
+				y: 500,
+				vx: 100
+			});
+
+			this.add("2d, aiBounce");
+
+			this.on("bump.left,bump.right,bump.bottom", function (collision) {
+				if(collision.obj.isA("Mario")) { 
+					Q.stageScene("endGame", 1); 
+					collision.obj.destroy();
+				}
+			});
+
+			this.on("bump.top", function (collision) {
+				if(collision.obj.isA("Mario")) { 
+					this.destroy();
+					collision.obj.p.vy = -300;
+				}
+			});
+		},
+
+		step: function(dt) { }
+	});
+
+	Q.Sprite.extend("Bloopa", {
+		init: function(p) {
+			this._super({
+				sheet: "bloopa",
+				x: 550,
+				y: 500
+			});
+		
+			this.add('2d');
+
+			this.on("bump.left,bump.right,bump.bottom, bump.bottom", function (collision) {
+				if(collision.obj.isA("Mario")) { 
+					Q.stageScene("endGame", 1); 
+					collision.obj.destroy();
+				}
+			});
+
+			this.on("bump.top", function (collision) {
+				if(collision.obj.isA("Mario")) { 
+					this.destroy();
+				}
+			}); 
+		},
+
+		step: function(dt) {
+			if (this.p.vy === 0) this.p.vy = -300;
+		}
 	});
 
 	Q.scene("level1", function(stage) {
 		Q.stageTMX("level.tmx",stage);
-		stage.add("viewport");//.follow(Q("Player").first());
+		stage.insert( new Q.Mario() );
+		stage.add("viewport").follow(Q("Mario").first());
 
+		stage.insert( new Q.Goomba() );
+		stage.insert( new Q.Bloopa() );
+
+		// set the camera
+		stage.viewport.offsetY = 155;
 		stage.centerOn(150, 380);
+	});
+
+	Q.scene("endGame", function (stage) {
+		var container = stage.insert(new Q.UI.Container({
+			x: Q.width/2, y: Q.height/2, fill: "rgba(0,0,0,0.5)"
+		}));
+
+		var button = container.insert(new Q.UI.Button({ x: 0, y: 0, fill: "#CCCCCC",
+                                                  label: "Play Again" }))         
+		var label = container.insert(new Q.UI.Text({x:10, y: -10 - button.p.h, 
+                                                   label: "Game over" }));
+		button.on("click",function() {
+			Q.clearStages();
+			Q.stageScene('level1');
+		});
+
+		container.fit(20);
 	});
 
 };
