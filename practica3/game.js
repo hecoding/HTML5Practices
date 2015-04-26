@@ -14,7 +14,9 @@ var game = function () {
 		Q.compileSheets("mario_small.png","mario_small.json");
 		Q.compileSheets("goomba.png", "goomba.json");
 		Q.compileSheets("bloopa.png", "bloopa.json");
-		Q.stageScene("level1", 0);
+		Q.load("mainTitle.png", function() {
+			Q.stageScene("mainTitle", 0);
+		});
 	});
 
 	// asynchronous load, it's a bad practice to code it like that
@@ -131,6 +133,17 @@ var game = function () {
 		step: function(dt) { }
 	});
 
+	Q.scene("mainTitle", function(stage) {
+		stage.insert(new Q.UI.Button({
+			asset: 'mainTitle.png',
+			x: Q.width/2,
+			y: Q.height/2
+		}, function() {
+			Q.clearStages();
+			Q.stageScene("level1", 0);
+		}));
+	});
+
 	Q.scene("level1", function(stage) {
 		Q.stageTMX("level.tmx",stage);
 		stage.insert( new Q.Mario() );
@@ -151,7 +164,7 @@ var game = function () {
 		}));
 
 		var button = container.insert(new Q.UI.Button({ x: 0, y: 0, fill: "#CCCCCC",
-                                                  label: "Play Again" }))         
+                                                  label: "Play Again" }));
 		var label = container.insert(new Q.UI.Text({x:10, y: -10 - button.p.h, 
                                                    label: "Game over" }));
 		button.on("click",function() {
@@ -168,7 +181,7 @@ var game = function () {
 		}));
 
 		var button = container.insert(new Q.UI.Button({ x: 0, y: 0, fill: "#CCCCCC",
-                                                  label: "Play Again?" }))         
+                                                  label: "Play Again?" }));
 		var label = container.insert(new Q.UI.Text({x:10, y: -10 - button.p.h, 
                                                    label: "You won!" }));
 		button.on("click",function() {
